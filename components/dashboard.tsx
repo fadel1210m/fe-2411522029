@@ -5,7 +5,6 @@ import { useApi } from '@/lib/api-context';
 import { getApiService } from '@/lib/api-service';
 import { DynamicTable } from './dynamic-table';
 import { DynamicForm } from './dynamic-form';
-import { SchemaEditor } from './schema-editor';
 import { ApiConfiguration } from './api-configuration';
 import { StatusIndicator } from './status-indicator';
 import { Modal } from './modal';
@@ -16,6 +15,7 @@ type FormMode = 'create' | 'edit';
 export function Dashboard() {
   const api = useApi();
   const { toasts, addToast, removeToast } = useToast();
+  const [mounted, setMounted] = useState(false);
 
   const [records, setRecords] = useState<Record<string, any>[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -26,8 +26,24 @@ export function Dashboard() {
   );
   const [formMode, setFormMode] = useState<FormMode>('create');
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{
+    id: string | number;
+    label: string;
+  } | null>(null);
 
   const recordsPerPage = 10;
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Restore apiService endpoints from saved context on mount
+  useEffect(() => {
+    if (api.baseUrl && api.endpoints) {
+      const apiService = getApiService(api.baseUrl);
+      apiService.setEndpoints(api.endpoints);
+    }
+  }, []);
 
   // Fetch records when resource or page changes
   useEffect(() => {
@@ -104,15 +120,20 @@ export function Dashboard() {
     }
   };
 
-  const handleDeleteRecord = async (id: string | number) => {
-    if (!confirm('Apakah Anda yakin ingin menghapus catatan ini?')) return;
+  const handleDeleteRecord = (record: Record<string, any>) => {
+    const firstField = api.fields.find((f) => f.name !== 'id')?.name || Object.keys(api.schema).find((k) => k !== 'id');
+    const label = firstField ? record[firstField] || `#${record.id}` : `#${record.id}`;
+    setDeleteTarget({ id: record.id, label: String(label) });
+  };
 
-    if (!api.baseUrl || !api.activeResource) return;
+  const confirmDelete = async () => {
+    if (!deleteTarget || !api.baseUrl || !api.activeResource) return;
 
     try {
       const apiService = getApiService(api.baseUrl);
-      await apiService.deleteRecord(api.activeResource, id);
+      await apiService.deleteRecord(api.activeResource, deleteTarget.id);
       addToast('Catatan berhasil dihapus', 'success');
+      setDeleteTarget(null);
       await fetchRecords();
     } catch (error: any) {
       addToast(error.message || 'Gagal menghapus catatan', 'error');
@@ -124,18 +145,17 @@ export function Dashboard() {
       {/* Header */}
       <header className="border-b border-border bg-card sticky top-0 z-30 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
-          <div className="flex-1">
-            <div className="flex items-center gap-3">
+            <a href="/" className="flex items-center gap-3">
               <img 
                 src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/3d/Logo_Unand_PTNBH.png/1920px-Logo_Unand_PTNBH.png"
                 alt="Logo Unand"
                 className="h-12 w-auto"
               />
-              <div className="flex-1">
+              <div>
                 <h1 className="text-xl font-semibold text-foreground">Tugas Besar Cloud Computing 2026</h1>
                 <div className="flex items-center gap-4 text-xs text-muted-foreground mt-1">
                   <span>Tester dan kelola endpoint REST API Anda</span>
-                  {api.student && (
+                  {mounted && api.student && (
                     <div className="flex items-center gap-2 pl-4 border-l border-border">
                       <span className="font-medium">{api.student.name}</span>
                       <span>•</span>
@@ -144,8 +164,7 @@ export function Dashboard() {
                   )}
                 </div>
               </div>
-            </div>
-          </div>
+            </a>
           <StatusIndicator />
         </div>
       </header>
@@ -162,14 +181,15 @@ export function Dashboard() {
                 <ApiConfiguration />
               </div>
 
-              {api.isConnected && (
-                <div className="bg-card border border-border rounded-lg p-5 hover:shadow-md transition-shadow">
-                  <h2 className="text-sm font-semibold text-foreground mb-4">
-                    Skema Manual
-                  </h2>
-                  <SchemaEditor />
-                </div>
-              )}
+              <a
+                href="/panduan"
+                className="flex items-center gap-2 p-3 bg-card border border-border rounded-lg hover:shadow-md transition-shadow text-xs text-muted-foreground hover:text-foreground"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Panduan Format Skema
+              </a>
             </div>
           </aside>
 
@@ -233,6 +253,7 @@ export function Dashboard() {
       >
         <DynamicForm
           schema={api.schema}
+          fields={api.fields}
           initialData={editingRecord || {}}
           onSubmit={handleFormSubmit}
           onCancel={() => setIsFormOpen(false)}
@@ -242,6 +263,38 @@ export function Dashboard() {
               : `Edit ${api.activeResource}`
           }
         />
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={deleteTarget !== null}
+        onClose={() => setDeleteTarget(null)}
+        title="Hapus Catatan"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-foreground">
+            Apakah Anda yakin ingin menghapus catatan ini?
+          </p>
+          {deleteTarget && (
+            <p className="text-sm text-muted-foreground bg-muted p-3 rounded-md">
+              <span className="font-medium text-foreground">{deleteTarget.label}</span>
+            </p>
+          )}
+          <div className="flex gap-3 justify-end pt-4 border-t border-border">
+            <button
+              onClick={() => setDeleteTarget(null)}
+              className="px-4 py-2 text-sm font-medium text-foreground bg-card border border-border rounded-md hover:bg-muted transition-colors"
+            >
+              Batal
+            </button>
+            <button
+              onClick={confirmDelete}
+              className="px-4 py-2 text-sm font-medium text-white bg-destructive hover:bg-destructive/90 rounded-md transition-colors"
+            >
+              Ya, Hapus
+            </button>
+          </div>
+        </div>
       </Modal>
 
       {/* Toasts */}

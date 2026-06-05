@@ -27,6 +27,7 @@ export interface SchemaField {
   type: 'text' | 'number' | 'email' | 'date' | 'textarea' | 'select' | 'boolean';
   required?: boolean;
   showInTable?: boolean;
+  options?: string[];
 }
 
 export interface ApiSchemaConfig {
@@ -123,8 +124,33 @@ export function ApiProvider({ children }: { children: React.ReactNode }) {
     return [];
   });
 
-  const [isConnected, setIsConnected] = useState(false);
-  const [activeResource, setActiveResource] = useState('');
+  const [isConnected, setIsConnectedState] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('isConnected') === 'true';
+    }
+    return false;
+  });
+
+  const setIsConnected = useCallback((connected: boolean) => {
+    setIsConnectedState(connected);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('isConnected', String(connected));
+    }
+  }, []);
+
+  const [activeResource, setActiveResourceState] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('activeResource') || '';
+    }
+    return '';
+  });
+
+  const setActiveResource = useCallback((resource: string) => {
+    setActiveResourceState(resource);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('activeResource', resource);
+    }
+  }, []);
   const [recordCount, setRecordCount] = useState(0);
   const [lastResponseTime, setLastResponseTime] = useState(0);
 

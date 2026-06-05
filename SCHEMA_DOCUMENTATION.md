@@ -53,7 +53,7 @@ Menyimpan informasi pribadi mahasiswa yang akan ditampilkan di header aplikasi.
 ```json
 "student": {
   "name": "Muhammad Nouval Habibie",
-  "nim": "2311523001"
+  "nim": "2211521020"
 }
 ```
 
@@ -151,7 +151,7 @@ File `public/schema-example.json` berisi contoh lengkap yang dapat Anda gunakan:
 {
   "student": {
     "name": "Muhammad Nouval Habibie",
-    "nim": "2311523001"
+    "nim": "2211521020"
   },
   "resource": {
     "name": "books",

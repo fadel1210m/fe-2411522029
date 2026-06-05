@@ -1,12 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { useApi } from '@/lib/api-context';
+import { useApi, type ApiSchema, type SchemaField } from '@/lib/api-context';
 import { getApiService } from '@/lib/api-service';
 import { Button } from '@/components/ui/button';
 
 export function ApiConfiguration() {
-  const { baseUrl, setBaseUrl, setIsConnected, setSchema } = useApi();
+  const { baseUrl, setBaseUrl, setIsConnected, setSchema, setFields, setEndpoints, setResource, setStudent, setActiveResource } = useApi();
   const [inputUrl, setInputUrl] = useState(baseUrl);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -30,8 +30,53 @@ export function ApiConfiguration() {
         setBaseUrl(inputUrl);
         setIsConnected(true);
         setSuccess('Terhubung dengan sukses!');
-        // Reset schema on new connection
-        setSchema({});
+
+        // Coba fetch schema otomatis dari endpoint /schema
+        try {
+          const schemaConfig = await apiService.getSchema();
+
+          if (schemaConfig && schemaConfig.fields && schemaConfig.fields.length > 0) {
+            const apiSchema: ApiSchema = {};
+            const schemaFields: SchemaField[] = [];
+
+            for (const field of schemaConfig.fields) {
+              apiSchema[field.name] = field.type;
+              schemaFields.push({
+                name: field.name,
+                label: field.label || field.name,
+                type: field.type,
+                required: field.required || false,
+                showInTable: field.showInTable ?? true,
+                options: field.options || undefined,
+              });
+            }
+
+            setSchema(apiSchema);
+            setFields(schemaFields);
+            if (schemaConfig.endpoints) {
+              setEndpoints(schemaConfig.endpoints);
+              apiService.setEndpoints(schemaConfig.endpoints);
+            }
+            if (schemaConfig.student) setStudent(schemaConfig.student);
+
+            // resource bisa berupa string ("berita") atau object ({ name: "berita", label: "..." })
+            if (schemaConfig.resource) {
+              if (typeof schemaConfig.resource === 'string') {
+                setResource({ name: schemaConfig.resource, label: schemaConfig.resource, description: '' });
+                setActiveResource(schemaConfig.resource);
+              } else {
+                setResource(schemaConfig.resource);
+                if (schemaConfig.resource.name)
+                  setActiveResource(schemaConfig.resource.name);
+              }
+            }
+
+            setSuccess('Terhubung dengan sukses! Skema otomatis dimuat.');
+          }
+        } catch (err) {
+          // Schema endpoint tidak tersedia — user bisa define manual
+          console.log('Auto-fetch schema tidak tersedia, gunakan editor manual');
+        }
       } else {
         setError('Gagal terhubung ke API');
         setIsConnected(false);

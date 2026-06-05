@@ -8,7 +8,7 @@ export interface DynamicTableProps {
   fields?: SchemaField[];
   data: Record<string, any>[];
   onEdit: (record: Record<string, any>) => void;
-  onDelete: (id: string | number) => void;
+  onDelete: (record: Record<string, any>) => void;
   onNew: () => void;
   isLoading?: boolean;
   currentPage: number;
@@ -104,7 +104,7 @@ export function DynamicTable({
                 </th>
               ))}
               <th className="px-4 py-3 text-left font-semibold text-foreground">
-                Tindakan
+                Aksi
               </th>
             </tr>
           </thead>
@@ -131,26 +131,28 @@ export function DynamicTable({
                     </td>
                   ))}
                   <td className="px-4 py-3">
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="ghost"
+                    <div className="flex gap-1">
+                      <button
                         onClick={() => onEdit(record)}
                         disabled={isLoading}
-                        className="text-primary hover:bg-primary/10"
+                        className="p-1.5 rounded-md text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
+                        title="Edit"
                       >
-                        Edit
-                      </Button>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
                       {hasId && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => onDelete(record.id)}
+                        <button
+                          onClick={() => onDelete(record)}
                           disabled={isLoading}
-                          className="text-destructive hover:bg-destructive/10"
+                          className="p-1.5 rounded-md text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
+                          title="Hapus"
                         >
-                          Hapus
-                        </Button>
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
                       )}
                     </div>
                   </td>

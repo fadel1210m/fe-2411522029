@@ -3,7 +3,7 @@ const http = require('http');
 const schemaData = {
   student: {
     name: "Muhammad Nouval Habibie",
-    nim: "2311523001"
+    nim: "2211521020"
   },
   resource: {
     name: "books",

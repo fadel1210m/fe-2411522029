@@ -1,11 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { ApiSchema } from '@/lib/api-context';
+import { ApiSchema, SchemaField } from '@/lib/api-context';
 import { Button } from '@/components/ui/button';
 
 export interface DynamicFormProps {
   schema: ApiSchema;
+  fields?: SchemaField[];
   initialData?: Record<string, any>;
   onSubmit: (data: Record<string, any>) => Promise<void>;
   onCancel: () => void;
@@ -15,6 +16,7 @@ export interface DynamicFormProps {
 
 export function DynamicForm({
   schema,
+  fields,
   initialData,
   onSubmit,
   onCancel,
@@ -26,6 +28,18 @@ export function DynamicForm({
   );
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const getFieldDef = (fieldName: string) =>
+    fields?.find((f) => f.name === fieldName);
+
+  const getFieldLabel = (fieldName: string) =>
+    getFieldDef(fieldName)?.label || fieldName;
+
+  const getFieldOptions = (fieldName: string) =>
+    getFieldDef(fieldName)?.options;
+
+  const isFieldRequired = (fieldName: string) =>
+    getFieldDef(fieldName)?.required || false;
 
   const handleChange = (field: string, value: any) => {
     setFormData((prev) => ({
@@ -129,10 +143,12 @@ export function DynamicForm({
             className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
             disabled={isSubmitting}
           >
-            <option value="">Pilih {fieldName}</option>
-            <option value="option1">Opsi 1</option>
-            <option value="option2">Opsi 2</option>
-            <option value="option3">Opsi 3</option>
+            <option value="">Pilih {getFieldLabel(fieldName)}</option>
+            {(getFieldOptions(fieldName) || []).map((opt) => (
+              <option key={opt} value={opt}>
+                {opt}
+              </option>
+            ))}
           </select>
         );
 
@@ -149,7 +165,10 @@ export function DynamicForm({
         {Object.entries(schema).map(([fieldName, fieldType]) => (
           <div key={fieldName}>
             <label className="block text-xs font-semibold text-muted-foreground mb-1 uppercase tracking-wide">
-              {fieldName}
+              {getFieldLabel(fieldName)}
+              {isFieldRequired(fieldName) && (
+                <span className="text-destructive ml-0.5">*</span>
+              )}
             </label>
             {renderField(fieldName, fieldType)}
           </div>

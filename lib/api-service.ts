@@ -1,4 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
+import type { Endpoints } from './api-context';
 
 export interface ApiResponse<T = any> {
   data: T;
@@ -18,6 +19,7 @@ export interface PaginatedResponse<T = any> {
 export class ApiService {
   private axiosInstance: AxiosInstance;
   private baseUrl: string;
+  private endpoints: Endpoints | null = null;
 
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl;
@@ -41,6 +43,17 @@ export class ApiService {
     });
   }
 
+  setEndpoints(ep: Endpoints | null) {
+    this.endpoints = ep;
+  }
+
+  private resolvePath(endpoint: string, id?: string | number): string {
+    if (id !== undefined) {
+      return endpoint.replace('{id}', String(id));
+    }
+    return endpoint;
+  }
+
   async testConnection(): Promise<boolean> {
     try {
       const response = await this.axiosInstance.get('/');
@@ -52,8 +65,9 @@ export class ApiService {
 
   async getRecords(resource: string, page: number = 1, limit: number = 10) {
     try {
+      const path = this.endpoints?.list || `/${resource}`;
       const startTime = performance.now();
-      const response = await this.axiosInstance.get(`/${resource}`, {
+      const response = await this.axiosInstance.get(this.resolvePath(path), {
         params: { page, limit },
       });
       const endTime = performance.now();
@@ -75,8 +89,9 @@ export class ApiService {
 
   async createRecord(resource: string, data: any) {
     try {
+      const path = this.endpoints?.create || `/${resource}`;
       const startTime = performance.now();
-      const response = await this.axiosInstance.post(`/${resource}`, data);
+      const response = await this.axiosInstance.post(this.resolvePath(path), data);
       const endTime = performance.now();
 
       return {
@@ -95,8 +110,9 @@ export class ApiService {
 
   async updateRecord(resource: string, id: string | number, data: any) {
     try {
+      const path = this.endpoints?.update || `/${resource}/${id}`;
       const startTime = performance.now();
-      const response = await this.axiosInstance.put(`/${resource}/${id}`, data);
+      const response = await this.axiosInstance.put(this.resolvePath(path, id), data);
       const endTime = performance.now();
 
       return {
@@ -115,8 +131,9 @@ export class ApiService {
 
   async deleteRecord(resource: string, id: string | number) {
     try {
+      const path = this.endpoints?.delete || `/${resource}/${id}`;
       const startTime = performance.now();
-      const response = await this.axiosInstance.delete(`/${resource}/${id}`);
+      const response = await this.axiosInstance.delete(this.resolvePath(path, id));
       const endTime = performance.now();
 
       return {
@@ -133,10 +150,24 @@ export class ApiService {
     }
   }
 
+  async getSchema(): Promise<any> {
+    try {
+      const response = await this.axiosInstance.get('/schema');
+      return response.data;
+    } catch (error: any) {
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          'Failed to fetch schema'
+      );
+    }
+  }
+
   async searchRecords(resource: string, query: string, limit: number = 10) {
     try {
+      const path = this.endpoints?.list || `/${resource}`;
       const startTime = performance.now();
-      const response = await this.axiosInstance.get(`/${resource}`, {
+      const response = await this.axiosInstance.get(this.resolvePath(path), {
         params: { search: query, limit },
       });
       const endTime = performance.now();
